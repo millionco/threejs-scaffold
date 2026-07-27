@@ -16,9 +16,25 @@ BunTest.describe("scaffolding", () => {
     BunTest.expect(pkg.dependencies.three).toBe("0.185.1");
     BunTest.expect(pkg.devDependencies.vite).toBe("7.3.1");
     BunTest.expect(pkg.devDependencies["@playwright/test"]).toBe("1.61.1");
-    BunTest.expect(pkg.devDependencies["three-tester"]).toBe("file:./three-tester-0.1.0.tgz");
+    BunTest.expect(String(pkg.devDependencies["three-tester"])).toContain(
+      "three-tester-0.1.0.tgz",
+    );
     BunTest.expect(pkg.packageManager).toStartWith("bun@");
     BunTest.expect(fs.existsSync(Path.join(root, "three-tester-0.1.0.tgz"))).toBe(true);
     BunTest.expect(fs.existsSync(Path.join(root, "playwright.config.ts"))).toBe(true);
+  });
+
+  BunTest.test("vendors the visual-capable three-tester package", async () => {
+    const entries = await new Response(
+      Bun.spawn(["tar", "-tzf", Path.join(root, "three-tester-0.1.0.tgz")]).stdout,
+    ).text();
+    for (const path of [
+      "package/dist/visuals.js",
+      "package/dist/inputs.js",
+      "package/dist/rules.js",
+      "package/dist/playwright.js",
+    ]) {
+      BunTest.expect(entries).toContain(path);
+    }
   });
 });

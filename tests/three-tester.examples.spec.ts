@@ -4,8 +4,9 @@
  * Patterns covered:
  * - evaluate() for live scene queries
  * - observe() around deterministic step() / Playwright input
- * - readPixels() for SwiftShader-stable color probes
  * - page fixture for DOM / keyboard
+ *
+ * Visual capture examples live in `visual.examples.spec.ts`.
  */
 import { expect, test, type ThreeTestContext } from "three-tester/playwright";
 
@@ -81,18 +82,4 @@ test("page + observe: Space pauses and resumes the render loop", async ({
   await page.keyboard.press("Space");
   const resumed = await threejs.observe(demoCube, () => threejs.step(500));
   expect(resumed.after.rotationY).toBeGreaterThan(resumed.before.rotationY);
-});
-
-test("readPixels: sample canvas colors under SwiftShader", async ({ threejs }) => {
-  await threejs.step(250);
-  const pixels = await threejs.readPixels([
-    { x: 640, y: 360 },
-    { x: 200, y: 200 },
-    { x: 1000, y: 500 },
-  ]);
-  expect(pixels).toHaveLength(3);
-  for (const [r, g, b, a] of pixels) {
-    expect(a).toBe(255);
-    expect(r + g + b).toBeGreaterThan(0);
-  }
 });

@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
     <title>Three.js Scaffolding</title>
+    <!-- three-tester visual capture resolves bare `three` via this map. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/__three__/three.module.js",
+          "three/addons/": "/__three__/addons/"
+        }
+      }
+    </script>
   </head>
   <body>
     <canvas id="view" aria-label="Three.js canvas"></canvas>

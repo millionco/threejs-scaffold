@@ -36,9 +36,13 @@ Dockerfile
 
 ## three-tester examples
 
-See `tests/three-tester.examples.spec.ts` for typed examples of `evaluate`,
-`observe`, `step`, `readPixels`, and Playwright `page` input against the demo
-scene. `tests/demo.spec.ts` covers the scaffolding canvas smoke checks.
+- `tests/demo.spec.ts` — scaffolding canvas smoke
+- `tests/three-tester.examples.spec.ts` — `evaluate` / `observe` / `step` / `page`
+- `tests/visual.examples.spec.ts` — `captureVisualObjects` visual verifiers
+
+The vendored `three-tester-0.1.0.tgz` matches the vt-minis task package (visuals,
+inputs, and rules included). `index.html` includes a `/__three__/` import map so
+`captureVisualObjects` can resolve bare `three` during Playwright runs.
 
 Suggested task folders when you grow past the demo scene:
 
