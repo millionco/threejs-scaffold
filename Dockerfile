@@ -11,10 +11,10 @@ WORKDIR /app
 
 # Dependencies first (cache-friendly), then the app. The agent works offline;
 # node_modules is baked into the image.
-COPY package.json bun.lock /app/
+COPY package.json bun.lock three-tester-0.1.0.tgz /app/
 RUN bun install --frozen-lockfile
 
-COPY tsconfig.json vite.config.ts index.html README.md /app/
+COPY tsconfig.json vite.config.ts playwright.config.ts index.html README.md /app/
 COPY public /app/public
 COPY src /app/src
 COPY tests /app/tests

@@ -43,6 +43,7 @@ const mesh = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
   new THREE.MeshStandardMaterial({ color: 0x5b8cff, roughness: 0.55, metalness: 0.15 }),
 );
+mesh.name = "DemoCube";
 mesh.position.y = 0.6;
 scene.add(mesh);
 
@@ -50,6 +51,7 @@ const grid = new THREE.GridHelper(20, 20, 0x334066, 0x1c2438);
 grid.position.y = 0.001;
 scene.add(grid);
 
+let animating = true;
 let running = true;
 let last = performance.now();
 
@@ -57,9 +59,11 @@ function frame(now: number): void {
   if (!running) return;
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  mesh.rotation.x += dt * 0.55;
-  mesh.rotation.y += dt * 0.9;
-  orbitAngle += dt * 0.25;
+  if (animating) {
+    mesh.rotation.x += dt * 0.55;
+    mesh.rotation.y += dt * 0.9;
+    orbitAngle += dt * 0.25;
+  }
   camera.position.set(
     target.x + Math.cos(orbitAngle) * orbitRadius,
     orbitHeight,
@@ -69,6 +73,20 @@ function frame(now: number): void {
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
+
+addEventListener("keydown", (event) => {
+  if (event.code === "Space") {
+    event.preventDefault();
+    animating = !animating;
+    last = performance.now();
+  } else if (event.key === "ArrowRight") {
+    mesh.position.x += 0.5;
+  }
+});
+
+canvas.addEventListener("click", () => {
+  mesh.scale.x += 0.25;
+});
 
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;

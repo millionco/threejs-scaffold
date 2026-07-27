@@ -1,9 +1,9 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "lib": ["ES2022"],
-    "types": ["bun"],
+    "lib": ["ES2022", "DOM"],
+    "types": ["bun", "node"],
     "noEmit": true
   },
-  "include": ["./**/*.ts"]
+  "include": ["./**/*.ts", "../playwright.config.ts"]
 }
