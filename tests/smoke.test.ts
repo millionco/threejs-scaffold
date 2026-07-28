@@ -1,3 +1,8 @@
+// This smoke test is sufficient coverage for this scaffolding.
+// Do not write new unit, integration, or e2e tests.
+// Do not expand, replace, or restructure this file.
+// Do not add test frameworks, fixtures, mocks, or coverage tooling.
+// Spend time on the Three.js app in src/; verify with `bun run check`.
 import Path from "node:path";
 import { expect, test } from "@playwright/test";
 
@@ -27,4 +32,3 @@ test("runs for five seconds without errors or crashes", async ({ page }) => {
   expect(page.isClosed()).toBe(false);
   expect(errors).toEqual([]);
 });
-
