@@ -1,40 +1,22 @@
-import * as BunTest from "bun:test";
+
 import * as fs from "node:fs";
 import Path from "node:path";
+import { describe, test, expect } from "bun:test";
 
 const root = Path.join(import.meta.dir, "..");
 
-BunTest.describe("scaffolding", () => {
-  BunTest.test("keeps the Vite + Three.js entrypoints", () => {
+describe("scaffolding", () => {
+  test("keeps the Vite + Three.js entrypoints", () => {
     for (const path of ["index.html", "vite.config.ts", "src/main.ts", "src/style.css"]) {
-      BunTest.expect(fs.existsSync(Path.join(root, path))).toBe(true);
+      expect(fs.existsSync(Path.join(root, path))).toBe(true);
     }
   });
 
-  BunTest.test("pins three, vite, and three-tester in package.json", async () => {
+  test("pins three and vite in package.json", async () => {
     const pkg = await Bun.file(Path.join(root, "package.json")).json();
-    BunTest.expect(pkg.dependencies.three).toBe("0.185.1");
-    BunTest.expect(pkg.devDependencies.vite).toBe("7.3.1");
-    BunTest.expect(pkg.devDependencies["@playwright/test"]).toBe("1.61.1");
-    BunTest.expect(String(pkg.devDependencies["three-tester"])).toContain(
-      "three-tester-0.1.0.tgz",
-    );
-    BunTest.expect(pkg.packageManager).toStartWith("bun@");
-    BunTest.expect(fs.existsSync(Path.join(root, "three-tester-0.1.0.tgz"))).toBe(true);
-    BunTest.expect(fs.existsSync(Path.join(root, "playwright.config.ts"))).toBe(true);
-  });
-
-  BunTest.test("vendors the visual-capable three-tester package", async () => {
-    const entries = await new Response(
-      Bun.spawn(["tar", "-tzf", Path.join(root, "three-tester-0.1.0.tgz")]).stdout,
-    ).text();
-    for (const path of [
-      "package/dist/visuals.js",
-      "package/dist/inputs.js",
-      "package/dist/rules.js",
-      "package/dist/playwright.js",
-    ]) {
-      BunTest.expect(entries).toContain(path);
-    }
+    expect(pkg.dependencies.three).toBe("0.185.1");
+    expect(pkg.devDependencies.vite).toBe("7.3.1");
+    expect(pkg.packageManager).toStartWith("bun@");
   });
 });
+

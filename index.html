@@ -3,24 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="data:," />
     <title>Three.js Scaffolding</title>
-    <!-- three-tester visual capture resolves bare `three` via this map. -->
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "/__three__/three.module.js",
-          "three/addons/": "/__three__/addons/"
-        }
-      }
-    </script>
   </head>
   <body>
-    <canvas id="view" aria-label="Three.js canvas"></canvas>
-    <div id="hud" aria-hidden="true">
-      <strong>threejs-scaffolding</strong>
-      <span>demo scene</span>
-    </div>
+    <canvas id="view"></canvas>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
