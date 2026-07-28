@@ -28,10 +28,8 @@ ZIP_PATH="$BASE_DIR/$NAME.zip"
 # so a resumed session doesn't need to reinstall anything.
 EXCLUDES=(node_modules dist .vite .cache artifacts playwright-report test-results .DS_Store)
 
-if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-  echo "Image '$IMAGE' not found, building it..."
-  docker build -t "$IMAGE" . || { echo "Build failed."; exit 1; }
-fi
+echo "Building image '$IMAGE' (cached layers reused if unchanged)..."
+docker build -t "$IMAGE" . || { echo "Build failed."; exit 1; }
 
 if [ ! -f "$CLAUDE_CREDS_SRC" ]; then
   echo "No exported Claude creds at $CLAUDE_CREDS_SRC"
@@ -137,13 +135,12 @@ case "$ANSWER" in
     echo
     echo "Zip:          $ZIP_PATH"
     echo "Raw folders:  $RAW_DIR"
-    echo "Cleanup:      docker rmi $IMAGE && rm -rf $RAW_DIR"
-    echo "              (removes the raw folders and the docker image, keeps the zip)"
+    echo "Cleanup:      rm -rf $RAW_DIR"
     ;;
   *)
     echo
     echo "Raw folders:  $RAW_DIR"
     echo "Continue:     ./scripts/claude-session.sh $NAME   (or: docker start -ai $CONTAINER_NAME)"
-    echo "Cleanup:      docker rm -f $CONTAINER_NAME && docker rmi $IMAGE && rm -rf $RAW_DIR"
+    echo "Cleanup:      docker rm -f $CONTAINER_NAME; rm -rf $RAW_DIR"
     ;;
 esac
