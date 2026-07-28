@@ -9,8 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "test": "bun test ./tests/*.test.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests/tsconfig.json",
-    "check": "bun run typecheck && bun run test",
-    "preview": "vite preview --host 127.0.0.1"
+    "check": "bun run typecheck && bun run test"
   },
   "dependencies": {
     "three": "0.185.1"
