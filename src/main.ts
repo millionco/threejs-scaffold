@@ -9,15 +9,10 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 100);
 camera.position.z = 3;
 
-const mesh = new THREE.Mesh(
-  new THREE.BoxGeometry(),
-  new THREE.MeshBasicMaterial({ color: 0x5b8cff }),
-);
-mesh.name = "DemoCube";
-scene.add(mesh);
+// Add lights, meshes, and other scene objects here.
 
 function frame() {
-  mesh.rotation.y += 0.01;
+  // Update scene objects and animations here.
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }

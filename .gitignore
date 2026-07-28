@@ -2,5 +2,8 @@ node_modules
 /dist
 .vite
 .cache
+/artifacts
+/playwright-report
+/test-results
 *.log
 .DS_Store

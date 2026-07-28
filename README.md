@@ -8,7 +8,7 @@ Bun + Vite + TypeScript + Three.js starter.
 bun install
 bun run dev        # Vite on 127.0.0.1:5173
 bun run build      # tsc --noEmit + production bundle
-bun run test       # bun:test smoke checks
+bun run test       # Playwright smoke test + screenshot
 bun run typecheck  # app + test tsconfigs
 ```
 
@@ -17,7 +17,8 @@ bun run typecheck  # app + test tsconfigs
 ```
 src/main.ts          # Three.js entry (swap for task code)
 src/style.css
-tests/smoke.test.ts  # scaffolding checks
+tests/smoke.test.ts  # five-second browser smoke test
+playwright.config.ts
 vite.config.ts
 tsconfig.json
 Dockerfile
