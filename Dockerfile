@@ -16,6 +16,8 @@ ENV PATH="/root/.local/bin:${PATH}"
 # Container runs as root; this tells Claude Code the root user is an
 # intentional, isolated sandbox so --dangerously-skip-permissions is allowed.
 ENV IS_SANDBOX=1
+# Enables 24-bit color rendering in the interactive shell / Claude Code TUI.
+ENV COLORTERM=truecolor
 
 WORKDIR /app
 
