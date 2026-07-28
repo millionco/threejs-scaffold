@@ -2,17 +2,44 @@
 # Launch an interactive Claude Code container session, then export the
 # results when you exit.
 #
-# Each project gets its own private copy of ~/.claude, ~/.claude.json, and
-# a bind-mounted app/ folder under ~/.threejs-sessions/<name>/ -- so running
+# Each project gets its own private ~/.claude, ~/.claude.json, and a
+# bind-mounted app/ folder under ~/.threejs-sessions/<name>/ -- so running
 # multiple containers at once never writes to the same files (and never
 # touches your real host ~/.claude or repo either).
+#
+# The session is also sandboxed: nothing but the auth token crosses over from
+# the host config, and Claude Code launches with all customizations off (see
+# CLAUDE_SANDBOX_ARGS below), so a run behaves like a stock install.
 #
 # Usage: scripts/claude-session.sh [project-name]
 set -uo pipefail
 
 IMAGE="threejs-scaffold"
 BASE_DIR="$HOME/.threejs-sessions"
-CLAUDE_CREDS_SRC="$HOME/.claude-docker-creds/.credentials.json"
+# Last-resort creds location, for machines where neither the keychain nor the
+# file-based store is readable. resolve_creds() below tries the live sources
+# first, so this only has to be populated by hand in odd setups.
+CLAUDE_CREDS_CACHE="$HOME/.claude-docker-creds/.credentials.json"
+
+# Flags folded into every `claude` invocation inside the container (the image
+# defines a shell function that reads this variable).
+#   --safe-mode           drops your CLAUDE.md, user/project skills, plugins,
+#                         hooks, MCP servers, custom commands/agents, output
+#                         styles and themes. Auth, built-in tools and
+#                         permissions keep working.
+#   --strict-mcp-config   also ignores any .mcp.json committed to the repo;
+#                         no --mcp-config is passed, so nothing is left to load.
+#   --settings            safe-mode deliberately ignores the auto-discovered
+#                         settings.json, so the last few knobs have to be handed
+#                         over explicitly. Without this, safe-mode still leaves
+#                         all of Anthropic's bundled skills loaded.
+#   --dangerously-skip-permissions
+#                         no approval prompts. Only reasonable because this is a
+#                         throwaway container with its own copy of the repo; the
+#                         image sets IS_SANDBOX=1 so running as root is allowed,
+#                         and skipDangerousModePermissionPrompt in the settings
+#                         below drops the one-time "are you sure" screen.
+CLAUDE_SANDBOX_ARGS="--safe-mode --strict-mcp-config --dangerously-skip-permissions --settings /root/.claude/sandbox-settings.json"
 
 NAME="${1:-session-$(date +%Y%m%d-%H%M%S)}"
 CONTAINER_NAME="threejs-$NAME"
@@ -31,11 +58,28 @@ EXCLUDES=(node_modules dist .vite .cache artifacts playwright-report test-result
 echo "Building image '$IMAGE' (cached layers reused if unchanged)..."
 docker build -t "$IMAGE" . || { echo "Build failed."; exit 1; }
 
-if [ ! -f "$CLAUDE_CREDS_SRC" ]; then
-  echo "No exported Claude creds at $CLAUDE_CREDS_SRC"
-  echo "Run: security find-generic-password -s \"Claude Code-credentials\" -w > $CLAUDE_CREDS_SRC && chmod 600 $CLAUDE_CREDS_SRC"
-  exit 1
-fi
+# Claude Code keeps its OAuth token in the OS keychain on some machines and in
+# a plain file on others, so try both rather than depending on one. Every
+# candidate is content-checked: a failed `security ... > file` redirect leaves a
+# 0-byte file behind, and an existence test would happily hand that to the
+# container, which then fails as a confusing "not logged in" inside Claude.
+usable_creds() { [ -s "$1" ] && grep -q accessToken "$1" 2>/dev/null; }
+
+resolve_creds() {
+  local dest="$1" src
+  if security find-generic-password -s "Claude Code-credentials" -w > "$dest" 2>/dev/null \
+     && usable_creds "$dest"; then
+    return 0
+  fi
+  for src in "$HOME/.claude/.credentials.json" "$CLAUDE_CREDS_CACHE"; do
+    if usable_creds "$src"; then
+      cp "$src" "$dest"
+      return 0
+    fi
+  done
+  rm -f "$dest"
+  return 1
+}
 
 RESUME=0
 CONTAINER_STATE=""
@@ -52,19 +96,50 @@ elif [ -n "$CONTAINER_STATE" ]; then
 fi
 
 mkdir -p "$CLAUDE_HOME"
-# Always refresh creds, even on resume, in case the token rotated since.
-cp "$CLAUDE_CREDS_SRC" "$CLAUDE_HOME/.credentials.json"
+# Always re-resolve, even on resume, in case the token rotated since.
+if ! resolve_creds "$CLAUDE_HOME/.credentials.json"; then
+  echo "Could not find a usable Claude login on this machine. Tried:"
+  echo "  keychain item \"Claude Code-credentials\""
+  echo "  $HOME/.claude/.credentials.json"
+  echo "  $CLAUDE_CREDS_CACHE"
+  echo "Run 'claude' on the host and log in, then try again."
+  exit 1
+fi
 chmod 600 "$CLAUDE_HOME/.credentials.json"
 
+# Rewritten every launch so edits here take effect without recreating the
+# container. Named apart from settings.json on purpose: this is loaded only
+# because CLAUDE_SANDBOX_ARGS passes it to --settings, never auto-discovered.
+cat > "$CLAUDE_HOME/sandbox-settings.json" <<'JSON'
+{
+  "disableBundledSkills": true,
+  "disableAllHooks": true,
+  "disableClaudeAiConnectors": true,
+  "includeCoAuthoredBy": false,
+  "skipDangerousModePermissionPrompt": true
+}
+JSON
+
 if [ "$RESUME" -eq 0 ]; then
-  # Private, per-project Claude config: a fresh copy, not a shared bind mount.
-  [ -f "$HOME/.claude/settings.json" ] && cp "$HOME/.claude/settings.json" "$CLAUDE_HOME/settings.json"
-  [ -f "$HOME/.claude/CLAUDE.md" ] && cp "$HOME/.claude/CLAUDE.md" "$CLAUDE_HOME/CLAUDE.md"
-  if [ -f "$HOME/.claude.json" ]; then
-    cp "$HOME/.claude.json" "$CLAUDE_JSON"
-  else
-    echo '{}' > "$CLAUDE_JSON"
-  fi
+  # Nothing else is carried over from the host: no settings.json (hooks,
+  # enabled plugins, extra marketplaces), no global CLAUDE.md, and no
+  # .claude.json (MCP servers plus every project you have ever opened).
+  # The container gets a fresh config holding only enough state to skip
+  # onboarding and the folder-trust prompt.
+  cat > "$CLAUDE_JSON" <<'JSON'
+{
+  "hasCompletedOnboarding": true,
+  "theme": "dark",
+  "autoUpdates": false,
+  "projects": {
+    "/app": {
+      "hasTrustDialogAccepted": true,
+      "hasCompletedProjectOnboarding": true,
+      "bypassPermissionsModeAccepted": true
+    }
+  }
+}
+JSON
 fi
 
 if [ ! -d "$APP_DIR" ]; then
@@ -80,6 +155,7 @@ echo "Project:                $NAME"
 echo "Container:               $CONTAINER_NAME"
 echo "Isolated Claude config:  $CLAUDE_HOME"
 echo "App folder (mounted):    $APP_DIR"
+echo "Sandbox flags:           claude $CLAUDE_SANDBOX_ARGS"
 
 if [ "$RESUME" -eq 1 ]; then
   echo "Resuming existing container ($CONTAINER_STATE)..."
@@ -89,6 +165,7 @@ else
   echo
   docker run -it --name "$CONTAINER_NAME" \
     --shm-size=1gb --memory=4g --cpus=2 \
+    -e CLAUDE_SANDBOX_ARGS="$CLAUDE_SANDBOX_ARGS" \
     -v "$CLAUDE_HOME:/root/.claude" \
     -v "$CLAUDE_JSON:/root/.claude.json" \
     -v "$APP_DIR:/app" \

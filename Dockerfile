@@ -18,6 +18,10 @@ ENV PATH="/root/.local/bin:${PATH}"
 ENV IS_SANDBOX=1
 # Enables 24-bit color rendering in the interactive shell / Claude Code TUI.
 ENV COLORTERM=truecolor
+# Throwaway sandbox: no telemetry or error reports, and no self-updating to a
+# version other than the one this image pinned at build time.
+ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+ENV DISABLE_AUTOUPDATER=1
 
 WORKDIR /app
 
@@ -33,5 +37,12 @@ COPY tsconfig.json vite.config.ts playwright.config.ts index.html /app/
 COPY public /app/public
 COPY src /app/src
 COPY tests /app/tests
+
+# Fold the sandbox flags scripts/claude-session.sh passes in into every
+# interactive `claude`, so plain `claude` / `claude --continue` stay locked
+# down without anyone having to remember the flags. `command` avoids recursing
+# into the function; an unset CLAUDE_SANDBOX_ARGS just means a stock launch.
+# Kept last so it never invalidates the expensive dependency layers above.
+RUN printf '%s\n' 'claude() { command claude ${CLAUDE_SANDBOX_ARGS-} "$@"; }' >> /root/.bashrc
 
 CMD ["/bin/bash"]
