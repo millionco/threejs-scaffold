@@ -32,7 +32,7 @@ Keychain, not in a file, so you export it once per machine.
 
 ```bash
 # 1. Build the image
-docker build -t threejs-scaffold .
+docker buildx build . -t threejs-scaffold
 
 # 2. Export your Keychain session to a standalone file (one-time, or whenever
 #    the token expires and `claude` asks you to log in again). Never prints
