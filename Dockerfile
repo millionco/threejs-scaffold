@@ -33,10 +33,11 @@ RUN bun install --frozen-lockfile
 # browser and its OS deps at build time since trial runs are offline.
 RUN bunx playwright install --with-deps chromium
 
-COPY tsconfig.json vite.config.ts playwright.config.ts index.html /app/
+COPY tsconfig.json tsconfig.check.json vite.config.ts playwright.config.ts index.html /app/
 COPY public /app/public
 COPY src /app/src
 COPY tests /app/tests
+COPY scripts/verify.mjs /app/scripts/verify.mjs
 
 # Fold the sandbox flags scripts/claude-session.sh passes in into every
 # interactive `claude`, so plain `claude` / `claude --continue` stay locked

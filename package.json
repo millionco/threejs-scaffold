@@ -6,10 +6,14 @@
   "packageManager": "bun@1.3.14",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
-    "test": "playwright test",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tests/tsconfig.json",
-    "check": "bun run typecheck && bun run test"
+    "build": "vite build",
+    "test": "bun run test:smoke",
+    "test:smoke": "playwright test tests/browser-health.test.ts --reporter=line",
+    "test:visual": "playwright test tests/smoke.test.ts --reporter=line",
+    "typecheck": "tsc -p tsconfig.check.json --noEmit --incremental",
+    "check": "bun run check:final",
+    "check:fast": "bun scripts/verify.mjs fast",
+    "check:final": "bun scripts/verify.mjs final"
   },
   "dependencies": {
     "three": "0.185.1"
