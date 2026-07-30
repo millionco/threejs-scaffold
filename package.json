@@ -8,7 +8,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "test": "bun run test:smoke",
-    "test:smoke": "playwright test tests/browser-health.test.ts --reporter=line",
+    "test:smoke": "playwright test tests/browser-health.smoke.test.ts --reporter=line",
     "test:visual": "playwright test tests/smoke.test.ts --reporter=line",
     "typecheck": "tsc -p tsconfig.check.json --noEmit --incremental",
     "check": "bun run check:final",

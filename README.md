@@ -22,7 +22,7 @@ subprocesses and return one JSON result; do not background them or poll logs.
 ```
 src/main.ts          # Three.js entry (swap for task code)
 src/style.css
-tests/browser-health.test.ts # fast screenshot-free health check
+tests/browser-health.smoke.test.ts # fast screenshot-free health check
 tests/smoke.test.ts          # final interaction and capture check
 playwright.config.ts
 vite.config.ts
