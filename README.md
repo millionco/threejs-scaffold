@@ -11,7 +11,11 @@ bun run typecheck    # incremental app + test typecheck
 bun run test:smoke   # fast browser health, no captures
 bun run check:fast   # typecheck + browser health
 bun run check:final  # typecheck + production build + visual captures
+bun run capture      # agent-readable JPEG screenshots into artifacts/
 ```
+
+Screenshots go through `scripts/capture.mjs`, which keeps frames small enough
+for an agent to `read` without blowing its context window. See `AGENTS.md`.
 
 Batch related edits. Run `check:fast` only at meaningful milestones and
 `check:final` once near completion. Both commands wait for their own bounded
@@ -29,5 +33,7 @@ vite.config.ts
 tsconfig.json
 tsconfig.check.json
 scripts/verify.mjs
+scripts/capture.mjs   # bounded screenshots for agents
+AGENTS.md
 Dockerfile
 ```

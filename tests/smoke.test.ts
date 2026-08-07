@@ -6,6 +6,11 @@
 import Path from "node:path";
 import { expect, test } from "@playwright/test";
 
+test.use({
+  viewport: { width: 1280, height: 720 },
+  deviceScaleFactor: 1,
+});
+
 test("runs for five seconds without errors or crashes", async ({ page }) => {
   const errors: string[] = [];
 
@@ -23,10 +28,13 @@ test("runs for five seconds without errors or crashes", async ({ page }) => {
 
   await page.goto("/", { waitUntil: "networkidle" });
   await page.waitForTimeout(5_000);
-  const screenshotPath = Path.resolve("artifacts/smoke.png");
+  // JPEG, not full-page PNG: agents inline this into a `read` result, and a
+  // full-res PNG of a 3D scene costs ~250k context tokens. See scripts/capture.mjs.
+  const screenshotPath = Path.resolve("artifacts/smoke.jpg");
   await page.screenshot({
     path: screenshotPath,
-    fullPage: true,
+    quality: 65,
+    type: "jpeg",
   });
 
   expect(page.isClosed()).toBe(false);
