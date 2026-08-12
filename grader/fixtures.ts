@@ -1,5 +1,5 @@
 import { expect, test as playwrightTest } from "@playwright/test";
-import { attachThree, type Three } from "./vendor/threewright.js";
+import { attachThree, type Three } from "./three-playwright/index.js";
 
 interface ThreeFixtures {
   three: Three;

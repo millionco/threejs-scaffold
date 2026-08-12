@@ -1,5 +1,5 @@
 /*
- * Vendored from millionco/threewright at commit
+ * Inlined from millionco/threewright at commit
  * 7286603a179ef1e98c6cbfb4620def6f987f1835.
  *
  * The upstream package bundles its browser runtime into the published module.
