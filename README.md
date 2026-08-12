@@ -9,6 +9,7 @@ bun install
 bun run dev          # Vite on 127.0.0.1:5173
 bun run typecheck    # incremental app + test typecheck
 bun run test:smoke   # fast browser health, no captures
+bun run test:grader  # inspect the live Three.js scene through Playwright
 bun run check:fast   # typecheck + browser health
 bun run check:final  # typecheck + production build + visual captures
 bun run capture      # agent-readable JPEG screenshots into artifacts/
@@ -28,6 +29,7 @@ src/main.ts          # Three.js entry (swap for task code)
 src/style.css
 tests/browser-health.smoke.test.ts # fast screenshot-free health check
 tests/smoke.test.ts          # final interaction and capture check
+grader/                      # self-contained live Three.js Playwright grader
 playwright.config.ts
 vite.config.ts
 tsconfig.json
