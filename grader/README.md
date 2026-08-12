@@ -9,9 +9,3 @@ Run it from the repository root:
 ```bash
 bun run test:grader
 ```
-
-`three-playwright/` contains an inline copy of the runtime and `attachThree` API
-from [`millionco/threewright`](https://github.com/millionco/threewright) at
-commit `7286603a179ef1e98c6cbfb4620def6f987f1835`. It is kept local intentionally,
-so the grader adds no package or registry dependency. See `three-playwright/LICENSE` for
-the upstream license.

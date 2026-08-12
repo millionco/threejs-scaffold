@@ -1,14 +1,3 @@
-/*
- * Inlined from millionco/threewright at commit
- * 7286603a179ef1e98c6cbfb4620def6f987f1835.
- *
- * The upstream package bundles its browser runtime into the published module.
- * This local copy keeps the same runtime and attachThree API together so the
- * grader does not depend on a separately published package.
- *
- * SPDX-License-Identifier: MIT
- */
-
 import type { Page } from "@playwright/test";
 import type { Camera, Scene, WebGLRenderer } from "three";
 
