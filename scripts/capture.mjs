@@ -11,7 +11,7 @@
 //   bun scripts/capture.mjs --at=2000,8000,15000  # a sequence
 //   bun scripts/capture.mjs --name=hud --click    # click canvas first
 //
-// Flags: --url --out --name --at --width --height --quality --max-kb --click
+// Flags: --url --out --name --at --width --height --quality --max-kb --click --ready --video-at
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import Path from "node:path";
@@ -30,19 +30,25 @@ const DEFAULTS = {
   click: false,
 };
 
-function parseArgs(argv) {
+const parseArgs = (argv) => {
   const options = { ...DEFAULTS };
   for (const arg of argv) {
-    const [rawKey, rawValue] = arg.replace(/^--/, "").split("=");
-    const value = rawValue ?? "true";
+    const argument = arg.replace(/^--/, "");
+    const separator = argument.indexOf("=");
+    const rawKey = separator === -1 ? argument : argument.slice(0, separator);
+    const value = separator === -1 ? "true" : argument.slice(separator + 1);
     switch (rawKey) {
       case "url":
       case "out":
       case "name":
+      case "ready":
         options[rawKey] = value;
         break;
       case "at":
-        options.at = value.split(",").map((entry) => Number(entry.trim())).filter(Number.isFinite);
+        options.at = value
+          .split(",")
+          .map((entry) => Number(entry.trim()))
+          .filter(Number.isFinite);
         break;
       case "width":
       case "height":
@@ -51,6 +57,12 @@ function parseArgs(argv) {
         break;
       case "max-kb":
         options.maxKb = Number(value);
+        break;
+      case "video-at":
+        options.videoAt = Number(value);
+        if (!Number.isFinite(options.videoAt) || options.videoAt < 0) {
+          throw new Error("--video-at needs a nonnegative time in seconds");
+        }
         break;
       case "click":
         options.click = value !== "false";
@@ -61,18 +73,18 @@ function parseArgs(argv) {
   }
   if (options.at.length === 0) throw new Error("--at needs at least one millisecond value");
   return options;
-}
+};
 
-async function isServerUp(url) {
+const isServerUp = async (url) => {
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(1_000) });
     return response.ok;
   } catch {
     return false;
   }
-}
+};
 
-async function startDevServer(url) {
+const startDevServer = async (url) => {
   const child = spawn("bun", ["run", "dev"], { cwd: process.cwd(), stdio: "ignore" });
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -81,11 +93,11 @@ async function startDevServer(url) {
   }
   child.kill();
   throw new Error(`dev server did not come up at ${url}`);
-}
+};
 
 // Step quality down until the encoded frame fits the budget. Re-shooting is
 // cheaper than shipping an image that blows up the reader's context window.
-async function captureWithinBudget(page, quality, maxBytes) {
+const captureWithinBudget = async (page, quality, maxBytes) => {
   const steps = [...new Set([quality, 50, 35, 25, 15])].filter((step) => step <= quality);
   let last = null;
   for (const step of steps) {
@@ -94,41 +106,70 @@ async function captureWithinBudget(page, quality, maxBytes) {
     if (buffer.byteLength <= maxBytes) return { ...last, withinBudget: true };
   }
   return { ...last, withinBudget: false };
-}
+};
 
-function costOf(bytes) {
+const costOf = (bytes) => {
   const base64Bytes = Math.ceil(bytes / 3) * 4;
   // Base64 tokenizes at roughly 3.5 characters per token on text-billed providers.
   return { base64Bytes, approxReadTokens: Math.round(base64Bytes / 3.5) };
-}
+};
 
 const options = parseArgs(process.argv.slice(2));
 const outDir = Path.resolve(options.out);
 await mkdir(outDir, { recursive: true });
 
-const reusedServer = await isServerUp(options.url);
-const server = reusedServer ? null : await startDevServer(options.url);
-
-const browser = await chromium.launch();
-const page = await browser.newPage({
-  viewport: { width: options.width, height: options.height },
-  deviceScaleFactor: 1,
-});
-
 const errors = [];
-page.on("console", (message) => {
-  if (message.type() === "error") errors.push(`console: ${message.text()}`);
-});
-page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
-page.on("crash", () => errors.push("page crashed"));
-
 const captures = [];
 let status = "ok";
+let server;
+let browser;
 
 try {
-  await page.goto(options.url, { waitUntil: "networkidle" });
+  if (!(await isServerUp(options.url))) server = await startDevServer(options.url);
+  browser = await chromium.launch();
+  const page = await browser.newPage({
+    viewport: { width: options.width, height: options.height },
+    deviceScaleFactor: 1,
+  });
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+  });
+  page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
+  page.on("crash", () => errors.push("page crashed"));
+
+  await page.goto(options.url, { waitUntil: "domcontentloaded" });
+  if (options.ready) await page.locator(options.ready).waitFor({ state: "visible" });
+  if (options.videoAt !== undefined) {
+    const video = page.locator("video").first();
+    await video.waitFor({ state: "attached" });
+    await video.evaluate(async (element) => {
+      element.pause();
+      const response = await fetch(element.currentSrc || element.src);
+      if (!response.ok) throw new Error(`Video fetch failed: ${response.status}`);
+      element.src = URL.createObjectURL(await response.blob());
+      element.load();
+    });
+    await page.waitForFunction(() => document.querySelector("video")?.readyState >= 1);
+    await video.evaluate((element, seconds) => {
+      element.pause();
+      if (seconds > element.duration) throw new Error("--video-at exceeds video duration");
+      element.currentTime = seconds;
+    }, options.videoAt);
+    await page.waitForFunction((seconds) => {
+      const video = document.querySelector("video");
+      return (
+        video &&
+        !video.seeking &&
+        video.readyState >= 2 &&
+        Math.abs(video.currentTime - seconds) < 0.05
+      );
+    }, options.videoAt);
+  }
   if (options.click) {
-    await page.locator("canvas").first().click({ position: { x: 8, y: 8 } });
+    await page
+      .locator("canvas")
+      .first()
+      .click({ position: { x: 8, y: 8 } });
   }
 
   const timeline = [...options.at].sort((a, b) => a - b);
@@ -145,6 +186,15 @@ try {
     captures.push({
       path: Path.relative(process.cwd(), file),
       atMs: mark,
+      url: page.url(),
+      ...(options.videoAt === undefined
+        ? {}
+        : {
+            videoTime: await page
+              .locator("video")
+              .first()
+              .evaluate((video) => video.currentTime),
+          }),
       bytes: shot.buffer.byteLength,
       quality: shot.quality,
       withinBudget: shot.withinBudget,
@@ -155,10 +205,12 @@ try {
   status = "failed";
   errors.push(`capture: ${error.message}`);
 } finally {
-  await browser.close();
+  await browser?.close();
   server?.kill();
 }
 
 if (errors.length > 0) status = "failed";
-process.stdout.write(`${JSON.stringify({ status, viewport: `${options.width}x${options.height}`, captures, errors }, null, 2)}\n`);
+process.stdout.write(
+  `${JSON.stringify({ status, requestedUrl: options.url, viewport: `${options.width}x${options.height}`, captures, errors }, null, 2)}\n`,
+);
 process.exit(status === "ok" ? 0 : 1);

@@ -23,6 +23,20 @@ frame as JPEG is ~50KB and ~20k tokens — 13x cheaper at identical resolution.
 
 Read one frame at a time and rely on the printed `approxReadTokens` to budget.
 
+URLs retain query parameters and fragments. Use a visible readiness selector when
+the scenario initializes asynchronously:
+
+```bash
+bun scripts/capture.mjs '--url=http://127.0.0.1:5173/?scene=test&debug=ao' '--ready=[data-scene="test"]' --at=0
+```
+
+To inspect a recorded video, serve a page containing its video element and use
+`--video-at=28 --at=0` to capture the decoded frame at 28 seconds. The helper
+loads the media as a blob so seeking works with servers that lack range support.
+Capture output includes the actual page URL and, for video, the captured time.
+The helper waits for document readiness, not network idleness; an open request
+must not prevent a ready scene from being captured.
+
 ## Verification
 
 Batch related edits. Run `bun run check:fast` at meaningful milestones and
